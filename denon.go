@@ -11,12 +11,17 @@ import (
 )
 
 type denon struct {
-	state *State
+	state            *State
+	writer           io.Writer
 	stateChangedFunc func()
 }
 
 func (d *denon) setState(s *State) {
 	d.state = s
+}
+
+func (d *denon) setWriter(w io.Writer) {
+	d.writer = w
 }
 
 func (d *denon) read(r io.Reader) {
@@ -147,4 +152,13 @@ func (d *denon) process(line string) {
 	}
 
 	d.stateChangedFunc()
+}
+
+func (d *denon) on() error {
+	_, err := d.writer.Write([]byte("PWON\r"))
+	return err
+}
+func (d *denon) off() error {
+	_, err := d.writer.Write([]byte("PWSTANDBY\r"))
+	return err
 }

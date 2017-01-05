@@ -15,9 +15,10 @@ import (
 
 var notify *notifier.Notify
 
-func main() { /*{{{*/
+func main() {
 	log.Info("Starting stamp-presence node")
 
+	// {{{
 	// Parse all commandline arguments, host and port parameters are added in the basenode init function
 	flag.Parse()
 
@@ -39,15 +40,33 @@ func main() { /*{{{*/
 
 	state := NewState()
 	node.SetState(state)
+	// }}}
 
-	// This worker recives all incomming commands
-	go serverRecv(node, connection)
+	d := &denon{}
+	d.setState(state)
+	d.stateChangedFunc = func() {
+		connection.Send(node.Node())
+	}
 
-	go serialConnector(state, node, connection)
-	select {}
-} /*}}}*/
+	go serialConnector(d)
 
-// WORKER that monitors the current connection state
+	for msg := range connection.Receive() {
+		var err error
+
+		switch msg.Cmd {
+		case "on":
+			err = d.on()
+		case "off":
+			err = d.off()
+		}
+
+		if err != nil {
+			log.Errorf("Failed to run commmand '%s': %s", msg.Cmd, err.Error())
+		}
+	}
+}
+
+// WORKER that monitors the current connection state// {{{
 func monitorState(node *protocol.Node, connection basenode.Connection) {
 	for s := range connection.State() {
 		switch s {
@@ -58,18 +77,9 @@ func monitorState(node *protocol.Node, connection basenode.Connection) {
 	}
 }
 
-// WORKER that recives all incomming commands
-func serverRecv(node *protocol.Node, connection basenode.Connection) {
-	for d := range connection.Receive() {
-		processCommand(node, connection, d)
-	}
-}
+// }}}
 
-// THis is called on each incomming command
-func processCommand(node *protocol.Node, connection basenode.Connection, cmd protocol.Command) {
-}
-
-func serialConnector(state *State, node *protocol.Node, connection basenode.Connection) {
+func serialConnector(d *denon) {
 	for {
 		<-time.After(time.Second)
 
@@ -101,12 +111,6 @@ func serialConnector(state *State, node *protocol.Node, connection basenode.Conn
 		if err != nil {
 			log.Error("Failed to open port: ", err)
 			continue
-		}
-
-		d := &denon{}
-		d.setState(state)
-		d.stateChangedFunc = func() {
-			connection.Send(node.Node())
 		}
 
 		d.read(s)
