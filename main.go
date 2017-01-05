@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"regexp"
 	"time"
 
 	log "github.com/cihub/seelog"
@@ -71,8 +70,6 @@ func processCommand(node *protocol.Node, connection basenode.Connection, cmd pro
 }
 
 func serialConnector(state *State, node *protocol.Node, connection basenode.Connection) {
-	r, _ := regexp.Compile("<([01]+|DOOR)>")
-
 	for {
 		<-time.After(time.Second)
 
@@ -93,7 +90,7 @@ func serialConnector(state *State, node *protocol.Node, connection basenode.Conn
 		if port.Name == "" {
 			log.Info("List of available ports: ")
 			for _, val := range ports {
-				log.Infof("Port: %#v", val);
+				log.Infof("Port: %#v", val)
 			}
 			continue
 		}
@@ -106,34 +103,8 @@ func serialConnector(state *State, node *protocol.Node, connection basenode.Conn
 			continue
 		}
 
-		var buff string
-
-	readLoop:
-		for {
-
-			// Read data
-			buf := make([]byte, 128)
-			n, err := s.Read(buf)
-			if err != nil {
-				log.Error(err)
-				break readLoop
-			}
-
-			buff += string(buf[:n])
-
-			res := r.FindAllStringSubmatchIndex(buff, -1)
-			for _, match := range res {
-				data := buff[match[0]+1 : match[1]-1]
-
-				log.Infof("Data: %#v", data)
-
-				connection.Send(node.Node())
-			}
-
-			if len(res) > 0 {
-				buff = buff[res[len(res)-1][1]:]
-			}
-
-		}
+		d := &denon{}
+		d.setState(state)
+		d.read(s)
 	}
 }
