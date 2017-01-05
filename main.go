@@ -27,7 +27,7 @@ func main() { /*{{{*/
 	//Activate the config
 	basenode.SetConfig(config)
 
-	node := protocol.NewNode("stamp-presence")
+	node := protocol.NewNode("denon-receiver")
 
 	//Start communication with the server
 	connection := basenode.Connect()
@@ -105,6 +105,10 @@ func serialConnector(state *State, node *protocol.Node, connection basenode.Conn
 
 		d := &denon{}
 		d.setState(state)
+		d.stateChangedFunc = func() {
+			connection.Send(node.Node())
+		}
+
 		d.read(s)
 	}
 }

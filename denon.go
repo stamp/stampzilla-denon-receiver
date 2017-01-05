@@ -12,6 +12,7 @@ import (
 
 type denon struct {
 	state *State
+	stateChangedFunc func()
 }
 
 func (d *denon) setState(s *State) {
@@ -59,6 +60,12 @@ func (d *denon) process(line string) {
 		d.state.MainZone.Power = true
 	case "PWSTANDBY":
 		d.state.MainZone.Power = false
+
+	case "ZMON":
+		d.state.MainZone.Power = true
+	case "ZMOFF":
+		d.state.MainZone.Power = false
+
 	case "SIPHONO":
 		d.state.MainZone.Source = "Phono"
 	case "SICD":
@@ -115,6 +122,8 @@ func (d *denon) process(line string) {
 		d.state.MainZone.Source = "Internet radio - Start Playback"
 	case "SIFVP":
 		d.state.MainZone.Source = "Favorites - Start Playback"
+	case "SIHDP":
+		d.state.MainZone.Source = "Hdp"
 	default:
 		switch {
 		case len(line) >= 4 && line[0:2] == "MV":
@@ -132,7 +141,10 @@ func (d *denon) process(line string) {
 
 			d.state.MainZone.Volume = volume
 		default:
-			log.Fatal(line[2:])
+			log.Printf("Unknown \"%s\"\n", line)
+			return
 		}
 	}
+
+	d.stateChangedFunc()
 }
